@@ -1,0 +1,407 @@
+---
+title: "Homework-3"
+author: "Alana Pengilley"
+date: "15/04/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Challenge 1
+
+For this exercise, the end aim is to fit a simple linear regression model to predict weaning age (WeaningAge_d) measured in days from species’ brain size (Brain_Size_Species_Mean) measured in grams.
+
+```{r}
+library(readr)
+library(ggplot2)
+library(broom)
+library(tidyverse)
+library(dplyr)
+```
+
+Load in Kamilar and Cooper Data
+
+```{r}
+f <- "https://raw.githubusercontent.com/difiore/ada-2021-datasets/main/KamilarAndCooperData.csv" 
+d <- read_csv(f, col_names = T)
+head(d)
+
+```
+
+Fit the regression on a normal model and using {ggplot2}, produce a scatterplot with the fitted line superimposed on the data and add fitted model equation to plot. 
+
+```{r}
+#normal model
+Mod_1 <- lm(WeaningAge_d~Brain_Size_Species_Mean, data = d)
+Mod_1
+
+p1 <- ggplot(data = d, aes(x = Brain_Size_Species_Mean, y = WeaningAge_d), na.rm = T)+
+               geom_point() +
+               geom_smooth(method = "lm", formula = y~x, se = F, color = "black")
+
+#append fitted model equation to plot 
+p1 <- p1 + geom_text(x = 300, y = 400, label = "y = 132.46 + 2.64(x)", col = "black")
+p1
+```
+
+Identify and interpret the point estimate of the slope (beta1)
+
+```{r}
+Mod_1.summary <- tidy(Mod_1)
+
+beta1 <- Mod_1.summary %>%
+  filter(term == "Brain_Size_Species_Mean") %>%
+  pull(estimate)
+
+beta0 <- Mod_1.summary %>%
+  filter(term == "(Intercept)") %>%
+  pull(estimate)
+
+beta1
+beta0
+
+
+#test null hypothesis that beta1 = 0
+beta1 ==0
+
+#test alternative hypothesis that beta1 does not = 0
+beta1!=0
+
+#Rejects the null hypothesis. Beta1 is the true slope; every time the x value increased, the y value will increase by beta1. 
+
+```
+
+Find a 90% CI for the slope (beta1) parameter. Using your model, add lines for the 90% confidence 
+
+```{r}
+ci <- predict(Mod_1, 
+              newdata = data.frame(Brain_Size_Species_Mean = d$Brain_Size_Species_Mean), 
+              interval = "confidence", level = 0.9)
+ci
+
+
+ci <- data.frame(ci)
+ci<- cbind(d$Brain_Size_Species_Mean, ci)
+names(ci) <- c("BrainSizeSpeciesMean", "c.fit", "c.lwr", "c.upr")
+
+p1 <- ggplot(data = d, aes(x = Brain_Size_Species_Mean, y = WeaningAge_d), na.rm = T)
+p1 <- p1 + geom_point(alpha = 0.5)
+p1 <- p1 + geom_line(
+  data = ci, aes(x = BrainSizeSpeciesMean, y = c.fit, 
+  color = "Fit Line"))
+p1 <- p1 + geom_line(
+  data = ci, aes(x = BrainSizeSpeciesMean, y = c.lwr, 
+  color = "CI"))
+p1 <- p1 + geom_line(
+  data = ci, aes(x = BrainSizeSpeciesMean, y = c.upr,
+  color = "CI"))
+p1
+```
+
+Add lines for predication interval bands on the plot
+
+```{r}
+pi <- predict(Mod_1, newdata = data.frame(Brain_Size_Species_Mean=d$Brain_Size_Species_Mean), interval = "prediction", level = 0.90)
+pi <- data.frame(pi)
+pi <- cbind(d$Brain_Size_Species_Mean, pi)
+names(pi) <- c("BrainSizeSpeciesMean", "p.fit", "p.lwr", "p.upr")
+
+p1 <- p1 + geom_line(data = pi, aes(x = BrainSizeSpeciesMean, y = p.lwr, col = "PI"))
+p1 <- p1 + geom_line(data = pi, aes(x = BrainSizeSpeciesMean, y = p.upr, col = "PI"))
+p1 <- p1 + scale_color_manual(values = c("blue", "black", "red"))
+p1
+```
+
+Produce a point estimate for the weaning age of a species whose brain weight is 750 gm
+
+```{r}
+(h.hat <- beta1 * 750 + beta0)
+
+```
+ 
+Produce associated 90% prediction interval for the weaning age of a species whose brain wight is 750 gm. 
+
+```{r}
+pi <- predict(Mod_1, 
+              newdata = data.frame(Brain_Size_Species_Mean = 750),
+              interval = "prediction", level = 0.90)
+pi
+#1783.8 - 243.8
+```
+
+
+## Log Model for Weaning age and Brain Size 
+
+Fit the regression on a normal model and using {ggplot2}, produce a scatterplot with the fitted line superimposed on the data and add fitted model equation to plot. 
+
+```{r}
+#log model
+head(d)
+
+d$Brain_Size_Species_Mean<-(log(d$Brain_Size_Species_Mean))
+d$WeaningAge_d<-(log(d$WeaningAge_d))
+
+
+Mod_2 <- lm(WeaningAge_d ~ Brain_Size_Species_Mean, data = d)
+Mod_2
+
+
+p2 <- ggplot(data = d, aes(x = Brain_Size_Species_Mean, y = WeaningAge_d), na.rm = T) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x, se = F, color = "black") + 
+  geom_text(x = 4, y = 4, label = "y = 3.37+ 0.57(x)", col = "black")#append fitted model equation to plot 
+p2
+
+```
+
+Identify and interpret the point estimate of the slope (beta1)
+
+```{r}
+Mod_2.summary <- tidy(Mod_2)
+
+beta1 <- Mod_2.summary %>%
+  filter(term == "Brain_Size_Species_Mean") %>%
+  pull(estimate)
+
+beta0 <- Mod_2.summary %>%
+  filter(term == "(Intercept)") %>%
+  pull(estimate)
+
+beta1
+beta0
+
+#test null hypothesis that beta1 = 0
+beta1 ==0
+
+#test alternative hypothesis that beta1 does not = 0
+beta1!=0
+
+#therefore, we reject the null hypothesis. Beta1 is the true slope; every time the x value increased, the y value will increase by beta1. 
+
+```
+
+Find a 90% CI for the slope (beta1) parameter. Using your model, add lines for the 90% confidence.
+
+```{r}
+#log transform
+ci2 <- predict(Mod_2, 
+               newdata = data.frame(Brain_Size_Species_Mean = d$Brain_Size_Species_Mean), 
+               interval = "confidence", level = 0.90)
+ci2
+
+ci2 <- data.frame(ci2)
+ci2 <- cbind(d$Brain_Size_Species_Mean, ci2)
+names(ci2) <- c("LogBrainSize", "c.fit", "c.lwr", "c.upr")
+
+p2 <- ggplot(data = d, aes(x = Brain_Size_Species_Mean, y = WeaningAge_d), na.rm = T)
+p2 <- p2 + geom_point(alpha = 0.5)
+p2 <- p2 + geom_line(
+  data = ci2, aes(x = LogBrainSize, y = c.fit, 
+  colour = "Fit Line"))
+p2 <- p2 + geom_line(
+  data = ci2, aes(x = LogBrainSize, y = c.lwr,
+  color = "CI"))
+p2 <- p2 + geom_line(
+  data = ci2, aes(x = LogBrainSize, y = c.upr,
+  color = "CI"))
+p2 <- p2 + scale_y_continuous(trans = "log10")
+p2 <- p2 + scale_x_continuous(trans = "log10")
+p2
+
+```
+
+Add lines for predication interval bands on the plot
+
+```{r}
+pi2 <- predict(Mod_2, newdata = data.frame(Brain_Size_Species_Mean=d$Brain_Size_Species_Mean), interval = "prediction", level = 0.90)
+
+pi2 <- data.frame(pi2)
+pi2 <- cbind(d$Brain_Size_Species_Mean, pi2)
+names(pi2) <- c("LogBrainSize", "p.fit", "p.lwr", "p.upr")
+
+p2 <- p2 + geom_line(data = pi2, aes(x = LogBrainSize, y = p.lwr, color = "PI"))
+p2 <- p2 + geom_line(data = pi2, aes(x = LogBrainSize, y = p.upr, color = "PI"))
+p2 <- p2 + scale_color_manual(values = c("blue", "black", "red"))
+p2
+```
+
+Produce a point estimate for the weaning age of a species whose brain weight is 750 gm
+
+```{r}
+(h.hat <- beta1 * log(750) + beta0)
+
+```
+ 
+Produce associated 90% prediction interval for the weaning age of a species whose brain wight is 750 gm. 
+
+```{r}
+pi2 <- predict(Mod_2, 
+              newdata = data.frame(Brain_Size_Species_Mean = log(750)),
+              interval = "prediction", level = 0.90)
+pi2
+#3.76 - 5.14
+```
+
+Q: Do you trust the model to predict observations accurately for this value of the explanatory variable? Why or why not?
+A: I would not trust the transformed model to accurately predict observations as the variables are too skewed to be able be able to accuratly predict. 
+
+Q: Looking at your two models (i.e., transformed versus log-log transformed), which do you think is better? Why?
+A: The log-transformed model would be better as the variables in the other model are highly skewed. Log transformation of the data produced a more normal data set and linear regression. 
+
+
+### Challenge 2
+
+```{r}
+library(infer)
+library(car)
+library(boot)
+library(stats)
+```
+
+Using bootstrapping, we can also do the same for estimating standard errors and CIs around regression parameters, such as beta coefficients.
+
+Using the “KamilarAndCooperData.csv” dataset, run a linear regression looking at log(MeanGroupSize) in relation to log(Body_mass_female_mean) and report your beta coeffiecients (slope and intercept)
+
+```{r}
+head(d) #recall data 
+
+lmGroupSize <- lm(log(MeanGroupSize) ~ log(Body_mass_female_mean), data = d)
+summary(lmGroupSize)
+
+#slope coefficient 
+coef <- lmGroupSize$coefficients
+(beta1 <- as.numeric(coef[2]))#slope
+(beta0 <- as.numeric(coef[1])) #intercept
+```
+
+Then, use bootstrapping to sample from the dataset 1000 times with replacement, each time fitting the same model and calculating the appropriate coefficients. [The size of each sample should be equivalent to the total number of observations in the dataset.] This generates a bootstrap sampling distribution for each beta coefficient. Plot a histogram of these sampling distributions for beta0 and beta1. 
+
+```{r}
+#bootstrap 1000 times
+set.seed(5)
+bootCoefs <- data.frame(beta0 = 1:1000, beta1 = 1:1000) #store outcome
+n <- nrow(d)
+for (i in 1:1000) {
+  s <- sample_n(d, size = n, replace = T)
+  lmboot <- lm(log(MeanGroupSize) ~ log(Body_mass_female_mean), data = s)
+  coef <- lmboot$coefficients 
+  beta0 <- as.numeric(coef[1])
+  beta1 <- as.numeric(coef[2])
+  bootCoefs$beta0[[i]] <- beta0
+  bootCoefs$beta1[[i]] <- beta1
+}
+
+#plot a histogram of the sampling distributions for beta 0 and 1
+par(mfrow=c(2, 1))
+hist(bootCoefs$beta0, breaks = 30, xlab = "Beta0 (intercept)", main = "Beta0 Bootstrap Sampling Distributions")
+hist(bootCoefs$beta1, breaks = 30, xlab = "Beta1 (slope)", main = "Beta1 Bootstrap Sampling Distributions")
+
+```
+
+Estimate the standard error for each of your beta coefficients as the standard deviation of the sampling distribution from your bootstrap.
+
+```{r}
+(beta1SE <- sd(bootCoefs$beta1)) #beta1
+(beta0SE <- sd(bootCoefs$beta0)) #beta0
+(BootSE <- cbind(beta0SE, beta1SE)) #combine both values
+
+```
+
+Also determine the 95% CI for each of your beta coefficients based on the appropriate quantiles from your sampling distribution.
+
+```{r}
+alpha <- 0.05
+beta0lower <- quantile(bootCoefs$beta0, alpha/2)
+beta0upper <- quantile(bootCoefs$beta0, 1 - (alpha/2))
+beta1lower <- quantile(bootCoefs$beta1, alpha/2)
+beta1upper <- quantile(bootCoefs$beta1, 1 - (alpha/2))
+(Bootstrapquantiles <- cbind(beta0lower, beta0upper, beta1lower, beta1upper))
+
+```
+
+How do the SEs estimated from the bootstrap sampling distribution compare to those estimated mathematically as part of lm() function?
+
+A: They are very similar. 
+
+```{r}
+m <- tidy(lmGroupSize)
+m$std.error #model
+b <- BootSE #bootstrap dist. 
+
+rbind(b, m$std.error) 
+#bootstrap values are slightly higher than the model values
+```
+
+How do your bootstrap CIs compare to those estimated mathematically as part of the lm() function?
+
+A: Also very similar. 
+
+```{r}
+CImodel <- confint(lmGroupSize, level = 1 - alpha)
+CImodel_lower <- CImodel[, 1]
+CImodel_upper <- CImodel[, 2]
+
+(cbind(CImodel_lower, CImodel_upper))
+
+Bootstrapquantiles
+
+```
+
+
+### Challenge 3
+
+Write your own function, called boot_lm(), that takes as its arguments a dataframe (d=), a linear model (model=, written as a character string, e.g., “logGS ~ logBM”), a user-defined confidence interval level (conf.level=, with default “0.95”), and a number of bootstrap replicates (reps=, with default “1000”).
+
+```{r}
+#model arguments 
+boot_lm <- function(d, model, conf.level = 0.95, reps = 1000)  {
+  df <- data.frame(Coefficient = c("Beta0", "Beta1"), Coefficientvalue = c(0,0), SE = c(0,0), UpperCI = c(0,0), LowerCI = c(0,0), MeanBetaBoot = c(0,0), SEBoot = c(0,0), UpperCIBoot = c(0,0), LowerCIBoot = c(0,0)) #df to store results of bootstrap
+  m <- lm(eval(parse(text = model)), data = d)#linear model using the model and d inputs 
+  mtidy <- tidy(m)
+  df$Coefficientvalue[1] <- as.numeric(mtidy[1,2])
+  df$Coefficientvalue[2] <- as.numeric(mtidy[2,2])
+  df$SE[1] <- as.numeric(mtidy[1,3])
+  df$SE[2] <- as.numeric(mtidy[2,3])
+  modelCI <- confint(m, level = conf.level)
+  df$UpperCI[1] <- modelCI[1,2]
+  df$UpperCI[2] <- modelCI[2,2]
+  df$LowerCI[1] <- modelCI[1,1]
+  df$LowerCI[1] <- modelCI[2,1]
+  set.seed(5) #for bootstrap
+  bootstrap <- data.frame(beta0 = 1:reps, beta1 = 1:reps)
+  n <- nrow(d)
+  for (i in 1:reps){
+    s <- sample_n(d, size = n, replace = T)
+    mboot <- lm(eval(parse(text = model)), data = s)
+    Bootlm <- mboot$coefficients
+    beta0 <- as.numeric(Bootlm[1])
+    beta1 <- as.numeric(Bootlm[2])
+    bootstrap$beta0[[i]] <- beta0
+    bootstrap$beta1[[i]] <- beta1
+  }
+  df$MeanBetaBoot[1] <- mean(bootstrap$beta0)
+  df$MeanBetaBoot[2] <- mean(bootstrap$beta1)
+  df$SEBoot[1] <- sd(bootstrap$beta0)
+  df$SEBoot[2] <- sd(bootstrap$beta1)
+  alpha <- 1 - conf.level
+  df$UpperCIBoot[1] <- quantile(bootstrap$beta0, 1 - (alpha/2))
+  df$UpperCIBoot[2] <- quantile(bootstrap$beta1, 1 - (alpha/2))
+  df$LowerCIBoot[1] <- quantile(bootstrap$beta0, alpha/2)
+  df$LowerCIBoot[2] <- quantile(bootstrap$beta1, alpha/2)
+  df
+}
+
+a <- boot_lm(d, "log(MeanGroupSize) ~ log(Body_mass_female_mean)")
+a
+
+b <- boot_lm(d, "log(DayLength_km) ~ log(Body_mass_female_mean)")
+b
+
+c <- boot_lm(d, "log(DayLength_km) ~ log(Body_mass_female_mean) + log(MeanGroupSize)")
+c
+
+```
